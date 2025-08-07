@@ -14,6 +14,7 @@ from kivy.uix.spinner import Spinner
 from kivy.clock import Clock
 from kivy.graphics.texture import Texture
 from kivy.core.image import Image as CoreImage
+from kivy.metrics import dp
 
 from tensorflow.lite.python.interpreter import Interpreter
 
@@ -46,25 +47,68 @@ class PoseApp(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(orientation='vertical', **kwargs)
 
-        file_select_layout = BoxLayout(orientation='horizontal', size_hint_y=0.25)
-        self.modelchooser = FileChooserIconView(filters=["*.tflite"], size_hint_x=0.5)
-        self.videochooser = FileChooserIconView(filters=["*.mp4"], size_hint_x=0.5)
-        file_select_layout.add_widget(self.modelchooser)
-        file_select_layout.add_widget(self.videochooser)
+        file_select_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=0.3,
+            spacing=dp(10),
+            padding=dp(10),
+        )
 
-        control_layout = BoxLayout(size_hint_y=0.07)
-        self.joint_spinner = Spinner(text="Prawy łokieć", values=list(JOINTS.keys()), size_hint_x=0.4)
-        self.btn = Button(text='Analizuj', size_hint_x=0.6)
+        model_layout = BoxLayout(orientation='vertical', size_hint_x=0.5, spacing=dp(5))
+        model_layout.add_widget(Label(text='Model', size_hint_y=None, height=dp(24)))
+        self.modelchooser = FileChooserIconView(filters=["*.tflite"])
+        model_layout.add_widget(self.modelchooser)
+
+        video_layout = BoxLayout(orientation='vertical', size_hint_x=0.5, spacing=dp(5))
+        video_layout.add_widget(Label(text='Wideo', size_hint_y=None, height=dp(24)))
+        self.videochooser = FileChooserIconView(filters=["*.mp4"])
+        video_layout.add_widget(self.videochooser)
+
+        file_select_layout.add_widget(model_layout)
+        file_select_layout.add_widget(video_layout)
+
+        control_layout = BoxLayout(
+            size_hint_y=0.1,
+            spacing=dp(10),
+            padding=dp(10),
+        )
+        self.joint_spinner = Spinner(
+            text="Prawy łokieć",
+            values=list(JOINTS.keys()),
+            size_hint_x=0.4,
+            font_size='16sp',
+        )
+        self.btn = Button(text='Analizuj', size_hint_x=0.6, font_size='16sp')
         control_layout.add_widget(self.joint_spinner)
         control_layout.add_widget(self.btn)
 
-        display_layout = BoxLayout(orientation='horizontal', size_hint_y=0.6)
+        display_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=0.55,
+            spacing=dp(10),
+            padding=dp(10),
+        )
+        video_box = BoxLayout(orientation='vertical', size_hint_x=0.5, spacing=dp(5))
+        video_box.add_widget(Label(text='Podgląd wideo', size_hint_y=None, height=dp(24)))
         self.video_img = Image()
-        self.plot_img = Image()
-        display_layout.add_widget(self.video_img)
-        display_layout.add_widget(self.plot_img)
+        video_box.add_widget(self.video_img)
 
-        self.status = Label(text="Wybierz model i wideo.", size_hint_y=0.08)
+        plot_box = BoxLayout(orientation='vertical', size_hint_x=0.5, spacing=dp(5))
+        plot_box.add_widget(Label(text='Wykres kąta', size_hint_y=None, height=dp(24)))
+        self.plot_img = Image()
+        plot_box.add_widget(self.plot_img)
+
+        display_layout.add_widget(video_box)
+        display_layout.add_widget(plot_box)
+
+        self.status = Label(
+            text="Wybierz model i wideo.",
+            size_hint_y=0.05,
+            halign='center',
+            valign='middle',
+            font_size='16sp',
+        )
+        self.status.bind(size=self.status.setter('text_size'))
 
         self.add_widget(file_select_layout)
         self.add_widget(control_layout)
