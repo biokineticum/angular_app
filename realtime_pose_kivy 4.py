@@ -23,10 +23,24 @@ JOINTS = {
     "Prawe kolano": [12, 14, 16],
     "Lewe kolano": [11, 13, 15],
 }
-ANGLE_THRESHOLD = 0.2
+CONFIDENCE_THRESHOLD = 0.2
 
 
 def get_angle(a, b, c):
+    """Return the angle between points ``a``, ``b`` and ``c`` in degrees.
+
+    Parameters
+    ----------
+    a, b, c : array-like
+        Dwuwymiarowe współrzędne punktów tworzących ramiona kąta przy wierzchołku
+        ``b``.
+
+    Returns
+    -------
+    float
+        Wartość kąta w stopniach obliczona na podstawie iloczynu skalarnego.
+    """
+
     ab = np.array(a) - np.array(b)
     cb = np.array(c) - np.array(b)
     cosine = np.dot(ab, cb) / (np.linalg.norm(ab) * np.linalg.norm(cb))
@@ -74,6 +88,7 @@ class PoseApp(BoxLayout):
         self.btn.bind(on_press=self.start_analysis)
         self.joint_idx = JOINTS[self.joint_spinner.text]
         self.joint_spinner.bind(text=self.on_joint_select)
+        self.fps = 1
 
     def on_joint_select(self, spinner, text):
         self.joint_idx = JOINTS[text]
@@ -98,6 +113,7 @@ class PoseApp(BoxLayout):
         output_details = interpreter.get_output_details()
 
         cap = cv2.VideoCapture(video_path)
+        self.fps = cap.get(cv2.CAP_PROP_FPS) or 1
         angles = []
         frame_num = 0
 
@@ -110,7 +126,7 @@ class PoseApp(BoxLayout):
             pts = [(int(x * frame.shape[1]), int(y * frame.shape[0])) for x, y, c in keypoints]
             confs = [c for x, y, c in keypoints]
 
-            if min([confs[i] for i in self.joint_idx]) > ANGLE_THRESHOLD:
+            if min([confs[i] for i in self.joint_idx]) > CONFIDENCE_THRESHOLD:
                 angle = get_angle(*[pts[i] for i in self.joint_idx])
             else:
                 angle = np.nan
@@ -138,10 +154,15 @@ class PoseApp(BoxLayout):
 
     def update_plot(self, angles):
         angles = self.interpolate_angles(angles)
+        if len(angles) < 2:
+            angular_velocity = np.array([])
+        else:
+            dt = 1 / self.fps
+            angular_velocity = np.gradient(angles, dt)
         plt.figure(figsize=(4, 3))
-        plt.plot(angles, color='cyan')
+        plt.plot(angular_velocity, color='cyan')
         plt.xlabel('Klatka')
-        plt.ylabel('Kąt [deg]')
+        plt.ylabel('Prędkość kątowa [deg/s]')
         plt.grid(True)
         plt.tight_layout()
 
